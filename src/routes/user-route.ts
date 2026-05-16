@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { registerUser, loginUser } from "../services/user-service";
+import { registerUser, loginUser, getCurrentUser } from "../services/user-service";
 
 export const userRoute = new Elysia({ prefix: "/api" })
   .post("/user", async ({ body, set }) => {
@@ -37,5 +37,45 @@ export const userRoute = new Elysia({ prefix: "/api" })
     body: t.Object({
       username: t.String(),
       password: t.String(),
+    })
+  })
+  .post("/users/current", async ({ headers, set }) => {
+    const authHeader = headers['authorization'];
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      set.status = 401;
+      return {
+        message: "unauthorized",
+        error: "token not found"
+      };
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      set.status = 401;
+      return {
+        message: "unauthorized",
+        error: "token not found"
+      };
+    }
+
+    const result = await getCurrentUser(token);
+
+    if (result.success) {
+      return {
+        message: "success",
+        data: result.data,
+      };
+    } else {
+      set.status = 401;
+      return {
+        message: "unauthorized",
+        error: "token not found"
+      };
+    }
+  }, {
+    headers: t.Object({
+      authorization: t.String()
     })
   });

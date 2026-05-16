@@ -2,41 +2,28 @@ buatkan issue.md yang berisi perancanaan untuk nanti di implementasikan oleh jun
 
 isi dari planning nya sebgai berikut:
 
-buat table sessions:
-id integer auto increment
-user_id integer foreign key reference users(id)
-token varchar(255) not null(isinya uuid untuk token user login)
-expired_at timestamp not null
-created_at timestamp not null
+buat api untuk get data user saat ini yang sedang login:
+endpoint : POST api/users/current
 
-buat api untuk login user:
-endpoint : POST api/users/login
-
-request body:
-{
-    "username": "<username>",
-    "password": "<password>"
-}
+Headers:
+Authorization: Bearer <token> (token adalah token yang di table users)
 
 response body:
 {
-    "message": "Login successful",
+    "message": "success",
     "data": {
-        "token": "<token>",
-        "user": {
-            "id": 1,
-            "username": "<username>",
-            "email": "<email>",
-            "created_at": "<created_at>",
-            "updated_at": "<updated_at>"
-        }
+        "id": 1,
+        "username": "<username>",
+        "email": "<email>",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>"
     }
 }
 
 response error:
 {
-    "message": "Invalid credentials",
-    "error": "Unauthorized"
+    "message": "unauthorized",
+    "error": "token not found"
 }
 
 struktur folder di dalam src

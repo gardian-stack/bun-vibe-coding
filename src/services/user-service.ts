@@ -54,3 +54,33 @@ export const loginUser = async (data: any) => {
     return { success: false };
   }
 };
+
+export const getCurrentUser = async (token: string) => {
+  try {
+    const session = await db.query.sessions.findFirst({
+      where: (sessions, { eq }) => eq(sessions.token, token),
+      with: {
+        user: true,
+      },
+    });
+
+    if (!session || !session.user) {
+      return { success: false };
+    }
+
+    // Periksa apakah token sudah kedaluwarsa
+    if (new Date() > session.expired_at) {
+      return { success: false };
+    }
+
+    const { password, ...userWithoutPassword } = session.user;
+
+    return {
+      success: true,
+      data: userWithoutPassword,
+    };
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return { success: false };
+  }
+};
