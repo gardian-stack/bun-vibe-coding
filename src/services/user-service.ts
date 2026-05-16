@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { users, sessions } from "../db/schema";
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 
 export const registerUser = async (data: any) => {
   try {
@@ -81,6 +82,23 @@ export const getCurrentUser = async (token: string) => {
     };
   } catch (error) {
     console.error("Error fetching current user:", error);
+    return { success: false };
+  }
+};
+
+export const logoutUser = async (token: string) => {
+  try {
+    const session = await db.query.sessions.findFirst({
+      where: (sessions, { eq }) => eq(sessions.token, token),
+    });
+
+    if (!session) return { success: false };
+
+    await db.delete(sessions).where(eq(sessions.token, token));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error logging out:", error);
     return { success: false };
   }
 };
