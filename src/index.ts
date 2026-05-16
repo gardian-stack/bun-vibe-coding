@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { userRoute } from "./routes/user-route";
 
-const app = new Elysia()
+export const app = new Elysia()
   .use(userRoute)
   .get("/", () => ({
     message: "Hello Elysia!",

@@ -1,67 +1,63 @@
-# Laporan Bug: Validasi Input Kurang pada Endpoint Register User
+# Perencanaan Implementasi Unit Test API
 
-Dokumen ini berisi detail bug terkait kurangnya validasi panjang data pada endpoint pendaftaran pengguna (`POST /api/user`) dan panduan langkah demi langkah untuk memperbaikinya. Panduan ini dirancang agar mudah diikuti oleh programmer junior maupun AI pendamping.
+Dokumen ini berisi panduan untuk mengimplementasikan *Unit Testing* pada seluruh endpoint API menggunakan kerangka kerja pengujian bawaan dari Bun (`bun test`). 
+Panduan ini dirancang cukup ringkas agar mudah dieksekusi oleh programmer junior maupun AI pendamping.
 
-## 1. Deskripsi Bug
+## 1. Tujuan dan Ruang Lingkup
+- **Tujuan**: Memastikan semua API berfungsi sesuai ekspektasi (baik saat sukses maupun saat gagal).
+- **Ruang Lingkup**: Menguji semua endpoint yang ada di aplikasi, yaitu:
+  1. `POST /api/user` (Register)
+  2. `POST /api/users/login` (Login)
+  3. `POST /api/users/current` (Get Current User)
+  4. `DELETE /api/users/logout` (Logout)
 
-Saat ini, fungsi register (`POST /api/user`) mengizinkan pengguna untuk mengirimkan data `username`, `email`, dan `password` dengan panjang tak terbatas. 
-
-Namun, skema database kita (di `src/db/schema.ts`) memiliki batasan panjang untuk kolom-kolom tersebut:
-- `username`: maksimal 50 karakter (`varchar(50)`)
-- `email`: maksimal 255 karakter (`varchar(255)`)
-- `password`: maksimal 255 karakter (`varchar(255)`)
-
-**Masalah:** 
-Jika pengguna mengirimkan data yang melebihi batas tersebut (misalnya, `username` dengan 300 karakter), database akan menolak query *insert* dengan error seperti `Data too long for column`. Hal ini menyebabkan endpoint merespons dengan generic error `{"error": "gagal membuat user"}` tanpa memberi tahu pengguna alasan spesifiknya, dan memberikan beban pemrosesan yang tidak perlu ke database.
-
-## 2. Ekspektasi Perbaikan
-
-Framework Elysia yang kita gunakan sudah memiliki fitur validasi bawaan (`elysia/t`). Kita perlu menambahkan aturan pembatasan di dalam skema validasi *body* pada endpoint `/api/user`. 
-
-Ekspektasi sistem setelah diperbaiki:
-- Jika `username` lebih dari 50 karakter, sistem akan langsung menolak request dengan status HTTP 400 (Bad Request) atau 422 (Unprocessable Entity) beserta pesan validasi dari Elysia. Data tidak akan diteruskan ke database.
-- Demikian juga untuk batasan panjang `email` dan format standar email.
+## 2. Struktur Direktori
+Buat sebuah folder baru bernama `test` di root proyek (atau sejajar dengan `src`). Seluruh file test harus berada di dalam folder ini.
+Contoh struktur file:
+```
+/test
+ ├── user-register.test.ts
+ ├── user-login.test.ts
+ ├── user-current.test.ts
+ └── user-logout.test.ts
+```
+Atau Anda bisa menggabungkannya ke dalam satu file `user.test.ts` sesuai preferensi.
 
 ---
 
-## 3. Tahapan Implementasi Perbaikan (Step-by-Step)
+## 3. Aturan Main (Wajib Diikuti)
 
-Berikut adalah panduan untuk memperbaikinya:
+1. **Gunakan `bun test`**: Tulis semua test menggunakan fitur bawaan Bun, seperti `describe`, `it`, dan `expect`.
+2. **Setup Server**: Anda bisa melakukan *mocking* request ke instance Elysia kita menggunakan metode bawaan Elysia seperti `app.handle(new Request(...))`.
+3. **Pembersihan Data (Konsistensi)**: 
+   - **Wajib** membersihkan (menghapus) data terkait dari database **sebelum** setiap *test case* dijalankan. 
+   - Gunakan blok `beforeEach` atau `beforeAll` untuk menjalankan query `delete` ke tabel `users` dan `sessions` menggunakan Drizzle. Tujuannya agar setiap skenario dimulai dengan database yang bersih dan tidak saling mengganggu.
 
-### Langkah 1: Periksa Skema Validasi Saat Ini
-1. Buka file routing API untuk user, yaitu `src/routes/user-route.ts`.
-2. Temukan blok kode untuk endpoint pendaftaran pengguna (`.post("/user", ...)`).
-3. Perhatikan bagian konfigurasi skema *body* di parameter kedua handler tersebut:
-   ```typescript
-   body: t.Object({
-     username: t.String(),
-     email: t.String(),
-     password: t.String(),
-   })
-   ```
+---
 
-### Langkah 2: Tambahkan Aturan Validasi Panjang String
-1. Modifikasi skema `t.String()` di atas dengan memberikan opsi batas minimum dan maksimum panjang string.
-2. Ubah kodenya menjadi seperti berikut:
-   ```typescript
-   body: t.Object({
-     username: t.String({ minLength: 3, maxLength: 50 }),
-     email: t.String({ format: 'email', maxLength: 255 }),
-     password: t.String({ minLength: 8, maxLength: 255 }),
-   })
-   ```
-   *Catatan:*
-   - `maxLength: 50` pada username akan mencegah pengiriman nama lebih dari 50 karakter (sesuai batasan `varchar(50)` di database).
-   - `format: 'email'` memastikan input harus berupa format email yang valid.
-   - `minLength` adalah bonus tambahan agar data yang masuk tidak terlalu pendek atau asal.
+## 4. Skenario Pengujian (Test Cases)
 
-### Langkah 3: Lakukan Pengujian (Testing)
-1. Jalankan server lokal menggunakan perintah:
-   `bun run dev`
-2. Buka Postman, cURL, atau alat penguji API lainnya.
-3. Lakukan request `POST` ke `http://localhost:3000/api/user` dengan menyertakan payload JSON di *body*.
-4. **Skenario Uji 1 (Kelebihan Karakter):** Kirim payload di mana `username` berisi lebih dari 50 karakter huruf secara acak.
-5. **Hasil yang Diharapkan:** Server harus mengembalikan respons gagal (seperti Bad Request) dan menyertakan deskripsi error spesifik dari Elysia tentang panjang `username` yang melebihi batas. Sistem TIDAK boleh merespons dengan pesan generic `"gagal membuat user"`.
-6. **Skenario Uji 2 (Email Tidak Valid):** Kirim format email yang salah (misalnya, `email: "bukanemail"`). Server juga harus menolaknya berkat atribut `format: 'email'`.
+Silakan implementasikan skenario pengujian berikut secara menyeluruh:
 
-Setelah Anda memastikan perubahan tersebut bekerja dan menangkap data salah pada lapisan terluar API, simpan (commit) pekerjaan Anda dan ajukan *Pull Request* baru!
+### A. Endpoint Register (`POST /api/user`)
+- **Sukses**: Mendaftar dengan data lengkap dan valid. Pastikan mendapat status HTTP 200 dan pesan sukses. Pastikan password tersimpan dalam bentuk *hash*.
+- **Gagal (Username kembar)**: Mendaftar menggunakan username yang sudah ada di database. Pastikan mendapat error yang relevan.
+- **Gagal (Validasi Input)**: Mendaftar dengan username lebih dari 50 karakter atau email yang formatnya salah. Pastikan mendapat error validasi.
+
+### B. Endpoint Login (`POST /api/users/login`)
+- **Sukses**: Login dengan kredensial yang benar. Pastikan respons mengembalikan *token* dan data user (tanpa password). Pastikan *token* tersimpan di tabel `sessions`.
+- **Gagal (Username salah)**: Login dengan username yang tidak terdaftar. Pastikan mendapat respons 401 Unauthorized.
+- **Gagal (Password salah)**: Login dengan username benar tetapi password salah. Pastikan mendapat respons 401 Unauthorized.
+
+### C. Endpoint Get Current User (`POST /api/users/current`)
+- **Sukses**: Meminta data user menggunakan *Bearer token* yang valid (buat tokennya secara manual/otomatis di dalam test). Pastikan mendapat respons data user terkait.
+- **Gagal (Token tidak valid)**: Mengirim request dengan token acak/salah. Pastikan ditolak dengan 401 Unauthorized.
+- **Gagal (Tanpa Token)**: Mengirim request tanpa menyertakan header Authorization. Pastikan ditolak dengan 401 Unauthorized.
+
+### D. Endpoint Logout (`DELETE /api/users/logout`)
+- **Sukses**: Mengirim request logout dengan token valid. Pastikan mendapat respons sukses dan **penting**: pastikan token tersebut benar-benar *hilang/terhapus* dari tabel `sessions` di database.
+- **Gagal (Token tidak valid/Tanpa Token)**: Mengirim request dengan token salah atau tanpa token sama sekali. Pastikan ditolak dengan 401 Unauthorized.
+
+---
+
+Silakan ikuti *checklist* skenario di atas dan buat kodenya senatural mungkin menggunakan fungsi bawaan `bun test`.
