@@ -1,7 +1,8 @@
 import { Elysia } from "elysia";
-import { db } from "./db";
+import { userRoute } from "./routes/user-route";
 
 const app = new Elysia()
+  .use(userRoute)
   .get("/", () => ({
     message: "Hello Elysia!",
     status: "online",
