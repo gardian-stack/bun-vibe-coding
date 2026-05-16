@@ -88,13 +88,11 @@ export const getCurrentUser = async (token: string) => {
 
 export const logoutUser = async (token: string) => {
   try {
-    const session = await db.query.sessions.findFirst({
-      where: (sessions, { eq }) => eq(sessions.token, token),
-    });
+    const [{ affectedRows }] = await db.delete(sessions).where(eq(sessions.token, token));
 
-    if (!session) return { success: false };
-
-    await db.delete(sessions).where(eq(sessions.token, token));
+    if (affectedRows === 0) {
+      return { success: false };
+    }
 
     return { success: true };
   } catch (error) {

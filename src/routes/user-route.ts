@@ -1,6 +1,36 @@
 import { Elysia, t } from "elysia";
 import { registerUser, loginUser, getCurrentUser, logoutUser } from "../services/user-service";
 
+const authMiddleware = new Elysia()
+  .derive(({ headers, set }) => {
+    const authHeader = headers['authorization'];
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      set.status = 401;
+      throw new Error("token not found");
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      set.status = 401;
+      throw new Error("token not found");
+    }
+
+    return { token };
+  })
+  .onError(({ code, error, set }) => {
+    if (code === 'NOT_FOUND') return;
+    
+    if (error.message === "token not found") {
+      set.status = 401;
+      return {
+        message: "unauthorized",
+        error: "token not found"
+      };
+    }
+  });
+
 export const userRoute = new Elysia({ prefix: "/api" })
   .post("/user", async ({ body, set }) => {
     const result = await registerUser(body);
@@ -39,27 +69,8 @@ export const userRoute = new Elysia({ prefix: "/api" })
       password: t.String(),
     })
   })
-  .post("/users/current", async ({ headers, set }) => {
-    const authHeader = headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      set.status = 401;
-      return {
-        message: "unauthorized",
-        error: "token not found"
-      };
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      set.status = 401;
-      return {
-        message: "unauthorized",
-        error: "token not found"
-      };
-    }
-
+  .use(authMiddleware)
+  .post("/users/current", async ({ token, set }) => {
     const result = await getCurrentUser(token);
 
     if (result.success) {
@@ -79,27 +90,7 @@ export const userRoute = new Elysia({ prefix: "/api" })
       authorization: t.String()
     })
   })
-  .delete("/users/logout", async ({ headers, set }) => {
-    const authHeader = headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      set.status = 401;
-      return {
-        message: "unauthorized",
-        error: "token not found"
-      };
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      set.status = 401;
-      return {
-        message: "unauthorized",
-        error: "token not found"
-      };
-    }
-
+  .delete("/users/logout", async ({ token, set }) => {
     const result = await logoutUser(token);
 
     if (result.success) {
