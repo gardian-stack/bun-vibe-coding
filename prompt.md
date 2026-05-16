@@ -2,8 +2,8 @@ buatkan issue.md yang berisi perancanaan untuk nanti di implementasikan oleh jun
 
 isi dari planning nya sebgai berikut:
 
-buat api untuk get data user saat ini yang sedang login:
-endpoint : POST api/users/current
+buat api untuk logout user:
+endpoint : DELETE api/users/logout
 
 Headers:
 Authorization: Bearer <token> (token adalah token yang di table users)
@@ -11,14 +11,10 @@ Authorization: Bearer <token> (token adalah token yang di table users)
 response body:
 {
     "message": "success",
-    "data": {
-        "id": 1,
-        "username": "<username>",
-        "email": "<email>",
-        "created_at": "<created_at>",
-        "updated_at": "<updated_at>"
-    }
+    "data": "Logout successful"
 }
+
+jika sukses adalah token tersebut di hapus dari database table sessions
 
 response error:
 {
