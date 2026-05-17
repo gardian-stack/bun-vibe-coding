@@ -1,63 +1,108 @@
-# Perencanaan Implementasi Unit Test API
+# Implementasi Swagger UI untuk Dokumentasi API
 
-Dokumen ini berisi panduan untuk mengimplementasikan *Unit Testing* pada seluruh endpoint API menggunakan kerangka kerja pengujian bawaan dari Bun (`bun test`). 
-Panduan ini dirancang cukup ringkas agar mudah dieksekusi oleh programmer junior maupun AI pendamping.
+## Deskripsi Tugas
+Tugas ini bertujuan untuk menambahkan antarmuka Swagger UI ke dalam proyek ini. Tujuannya adalah agar pengguna (user/developer) lain yang ingin menggunakan API pada aplikasi ini dapat dengan mudah melihat dokumentasi, payload yang dibutuhkan, dan langsung melakukan uji coba pemanggilan API (test endpoint) melalui browser.
 
-## 1. Tujuan dan Ruang Lingkup
-- **Tujuan**: Memastikan semua API berfungsi sesuai ekspektasi (baik saat sukses maupun saat gagal).
-- **Ruang Lingkup**: Menguji semua endpoint yang ada di aplikasi, yaitu:
-  1. `POST /api/user` (Register)
-  2. `POST /api/users/login` (Login)
-  3. `POST /api/users/current` (Get Current User)
-  4. `DELETE /api/users/logout` (Logout)
+Proyek ini dibangun menggunakan **Elysia.js**. Framework ini telah menyediakan plugin resmi untuk Swagger yang secara otomatis akan membaca skema validasi (TypeBox) yang sudah didefinisikan di setiap route.
 
-## 2. Struktur Direktori
-Buat sebuah folder baru bernama `test` di root proyek (atau sejajar dengan `src`). Seluruh file test harus berada di dalam folder ini.
-Contoh struktur file:
+---
+
+## Tahapan Implementasi
+
+Mohon ikuti instruksi berikut secara berurutan. Instruksi ini dirancang sangat mendetail agar mudah diikuti.
+
+### Langkah 1: Instalasi Plugin Swagger
+Elysia memiliki plugin bawaan resmi untuk Swagger. Langkah pertama adalah menginstal package tersebut ke dalam proyek.
+Buka terminal/command prompt, pastikan berada di direktori *root* proyek, lalu jalankan perintah berikut:
+```bash
+bun add @elysiajs/swagger
 ```
-/test
- ├── user-register.test.ts
- ├── user-login.test.ts
- ├── user-current.test.ts
- └── user-logout.test.ts
+
+### Langkah 2: Daftarkan Plugin di Entry Point
+Buka file utama aplikasi, yaitu `src/index.ts`. Anda perlu mengimpor plugin swagger dan mendaftarkannya ke dalam instance Elysia.
+
+**Detail Perubahan di `src/index.ts`:**
+1. Di bagian paling atas file, tambahkan import untuk swagger:
+   ```typescript
+   import { swagger } from "@elysiajs/swagger";
+   ```
+2. Temukan baris di mana instance Elysia dibuat (biasanya `export const app = new Elysia()`).
+3. Tambahkan `.use(swagger())` tepat sebelum pendaftaran route lainnya (sebelum `.use(userRoute)`). Anda juga bisa memberikan sedikit konfigurasi informasi dasar.
+
+**Contoh Kode yang Diharapkan:**
+```typescript
+import { Elysia } from "elysia";
+import { swagger } from "@elysiajs/swagger";
+import { userRoute } from "./routes/user-route";
+
+export const app = new Elysia()
+  // Tambahkan baris ini
+  .use(swagger({
+    documentation: {
+      info: {
+        title: 'Belajar Vibe Coding API Documentation',
+        version: '1.0.0',
+        description: 'Dokumentasi API untuk manajemen user'
+      }
+    }
+  }))
+  .use(userRoute)
+  .get("/", () => ({
+    message: "Hello Elysia!",
+    status: "online",
+  }))
+  .listen(3000);
+
+console.log(
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+);
 ```
-Atau Anda bisa menggabungkannya ke dalam satu file `user.test.ts` sesuai preferensi.
+
+### Langkah 3: Mengelompokkan Route dengan Tags (Opsional Tapi Sangat Disarankan)
+Untuk membuat tampilan Swagger lebih rapi, buka file `src/routes/user-route.ts`. Tambahkan informasi deskriptif untuk setiap endpoint menggunakan properti `detail` di parameter ketiga pada deklarasi route.
+
+**Contoh Penambahan pada Register Route:**
+Ubah bagian validasi yang tadinya seperti ini:
+```typescript
+  }, {
+    body: t.Object({
+      username: t.String({ minLength: 3, maxLength: 50 }),
+      email: t.String({ format: 'email', maxLength: 255 }),
+      password: t.String({ minLength: 8, maxLength: 255 }),
+    })
+  })
+```
+Menjadi seperti ini:
+```typescript
+  }, {
+    body: t.Object({
+      username: t.String({ minLength: 3, maxLength: 50 }),
+      email: t.String({ format: 'email', maxLength: 255 }),
+      password: t.String({ minLength: 8, maxLength: 255 }),
+    }),
+    detail: {
+      tags: ['Users'],
+      summary: 'Register User Baru',
+      description: 'Endpoint ini digunakan untuk mendaftarkan akun pengguna baru ke sistem.'
+    }
+  })
+```
+*(Lakukan hal yang mirip untuk endpoint login, get current, dan logout. Pastikan `tags: ['Users']` agar semuanya berada dalam satu kelompok di tampilan Swagger).*
+
+### Langkah 4: Uji Coba (Testing)
+Setelah selesai melakukan perubahan di atas, lakukan uji coba untuk memastikan Swagger berjalan dengan baik:
+1. Jalankan aplikasi menggunakan perintah:
+   ```bash
+   bun run dev
+   ```
+2. Buka web browser (Chrome/Firefox/dsb).
+3. Kunjungi URL: `http://localhost:3000/swagger`
+4. Anda seharusnya melihat halaman dokumentasi Swagger UI dengan daftar API yang tersedia. Coba klik salah satu endpoint untuk melihat detail strukturnya.
 
 ---
 
-## 3. Aturan Main (Wajib Diikuti)
-
-1. **Gunakan `bun test`**: Tulis semua test menggunakan fitur bawaan Bun, seperti `describe`, `it`, dan `expect`.
-2. **Setup Server**: Anda bisa melakukan *mocking* request ke instance Elysia kita menggunakan metode bawaan Elysia seperti `app.handle(new Request(...))`.
-3. **Pembersihan Data (Konsistensi)**: 
-   - **Wajib** membersihkan (menghapus) data terkait dari database **sebelum** setiap *test case* dijalankan. 
-   - Gunakan blok `beforeEach` atau `beforeAll` untuk menjalankan query `delete` ke tabel `users` dan `sessions` menggunakan Drizzle. Tujuannya agar setiap skenario dimulai dengan database yang bersih dan tidak saling mengganggu.
-
----
-
-## 4. Skenario Pengujian (Test Cases)
-
-Silakan implementasikan skenario pengujian berikut secara menyeluruh:
-
-### A. Endpoint Register (`POST /api/user`)
-- **Sukses**: Mendaftar dengan data lengkap dan valid. Pastikan mendapat status HTTP 200 dan pesan sukses. Pastikan password tersimpan dalam bentuk *hash*.
-- **Gagal (Username kembar)**: Mendaftar menggunakan username yang sudah ada di database. Pastikan mendapat error yang relevan.
-- **Gagal (Validasi Input)**: Mendaftar dengan username lebih dari 50 karakter atau email yang formatnya salah. Pastikan mendapat error validasi.
-
-### B. Endpoint Login (`POST /api/users/login`)
-- **Sukses**: Login dengan kredensial yang benar. Pastikan respons mengembalikan *token* dan data user (tanpa password). Pastikan *token* tersimpan di tabel `sessions`.
-- **Gagal (Username salah)**: Login dengan username yang tidak terdaftar. Pastikan mendapat respons 401 Unauthorized.
-- **Gagal (Password salah)**: Login dengan username benar tetapi password salah. Pastikan mendapat respons 401 Unauthorized.
-
-### C. Endpoint Get Current User (`POST /api/users/current`)
-- **Sukses**: Meminta data user menggunakan *Bearer token* yang valid (buat tokennya secara manual/otomatis di dalam test). Pastikan mendapat respons data user terkait.
-- **Gagal (Token tidak valid)**: Mengirim request dengan token acak/salah. Pastikan ditolak dengan 401 Unauthorized.
-- **Gagal (Tanpa Token)**: Mengirim request tanpa menyertakan header Authorization. Pastikan ditolak dengan 401 Unauthorized.
-
-### D. Endpoint Logout (`DELETE /api/users/logout`)
-- **Sukses**: Mengirim request logout dengan token valid. Pastikan mendapat respons sukses dan **penting**: pastikan token tersebut benar-benar *hilang/terhapus* dari tabel `sessions` di database.
-- **Gagal (Token tidak valid/Tanpa Token)**: Mengirim request dengan token salah atau tanpa token sama sekali. Pastikan ditolak dengan 401 Unauthorized.
-
----
-
-Silakan ikuti *checklist* skenario di atas dan buat kodenya senatural mungkin menggunakan fungsi bawaan `bun test`.
+## Kriteria Selesai (Acceptance Criteria)
+1. Perintah `bun add @elysiajs/swagger` berhasil dijalankan.
+2. Saat aplikasi dijalankan (`bun run dev`), URL `http://localhost:3000/swagger` dapat diakses dan menampilkan antarmuka Swagger UI.
+3. Seluruh endpoint `/api/user`, `/api/users/login`, `/api/users/current`, dan `/api/users/logout` muncul di halaman Swagger beserta parameter/body yang dibutuhkan.
+4. Kode tidak mengalami error atau *crash*.
