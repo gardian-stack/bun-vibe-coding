@@ -3,6 +3,14 @@ import { users, sessions } from "../db/schema";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
+/**
+ * Mendaftarkan pengguna baru.
+ * Fungsi ini melakukan enkripsi (hashing) pada password menggunakan bcrypt
+ * sebelum menyimpan data pengguna (username, email, password) ke database.
+ * 
+ * @param data Data registrasi pengguna (username, email, password)
+ * @returns Objek dengan status success true jika berhasil, atau false jika gagal
+ */
 export const registerUser = async (data: any) => {
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -20,6 +28,14 @@ export const registerUser = async (data: any) => {
   }
 };
 
+/**
+ * Melakukan proses otentikasi/login pengguna.
+ * Fungsi ini memverifikasi username dan password. Jika valid, akan membuat 
+ * sesi (token) baru yang berlaku selama 7 hari dan menyimpannya ke database.
+ * 
+ * @param data Data login pengguna (username, password)
+ * @returns Objek berisi status success, token, dan data pengguna (tanpa password)
+ */
 export const loginUser = async (data: any) => {
   try {
     const user = await db.query.users.findFirst({
@@ -56,6 +72,14 @@ export const loginUser = async (data: any) => {
   }
 };
 
+/**
+ * Mengambil data profil pengguna yang sedang login.
+ * Fungsi ini memeriksa validitas token sesi di database dan memastikannya 
+ * belum kedaluwarsa, lalu mengembalikan data pengguna terkait.
+ * 
+ * @param token Token sesi pengguna
+ * @returns Objek berisi status success dan data pengguna (tanpa password) jika valid
+ */
 export const getCurrentUser = async (token: string) => {
   try {
     const session = await db.query.sessions.findFirst({
@@ -86,6 +110,14 @@ export const getCurrentUser = async (token: string) => {
   }
 };
 
+/**
+ * Mengakhiri sesi pengguna (Logout).
+ * Fungsi ini menghapus token sesi pengguna dari database sehingga token 
+ * tersebut tidak dapat digunakan lagi.
+ * 
+ * @param token Token sesi pengguna yang ingin diakhiri
+ * @returns Objek dengan status success true jika berhasil dihapus
+ */
 export const logoutUser = async (token: string) => {
   try {
     const session = await db.query.sessions.findFirst({
