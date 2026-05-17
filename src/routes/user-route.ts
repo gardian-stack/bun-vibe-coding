@@ -1,6 +1,14 @@
 import { Elysia, t } from "elysia";
 import { registerUser, loginUser, getCurrentUser, logoutUser } from "../services/user-service";
 
+const UserProfileSchema = t.Object({
+  id: t.Numeric(),
+  username: t.String(),
+  email: t.String(),
+  created_at: t.Any(),
+  updated_at: t.Any(),
+});
+
 export const userRoute = new Elysia({ prefix: "/api" })
   .post("/user", async ({ body, set }) => {
     const result = await registerUser(body);
@@ -17,6 +25,14 @@ export const userRoute = new Elysia({ prefix: "/api" })
       email: t.String({ format: 'email', maxLength: 255 }),
       password: t.String({ minLength: 8, maxLength: 255 }),
     }),
+    response: {
+      200: t.Object({
+        data: t.String(),
+      }),
+      400: t.Object({
+        error: t.String(),
+      }),
+    },
     detail: {
       tags: ["User"],
       summary: "Register User Baru",
@@ -43,6 +59,19 @@ export const userRoute = new Elysia({ prefix: "/api" })
       username: t.String(),
       password: t.String(),
     }),
+    response: {
+      200: t.Object({
+        message: t.String(),
+        data: t.Object({
+          token: t.String(),
+          user: UserProfileSchema,
+        }),
+      }),
+      401: t.Object({
+        message: t.String(),
+        error: t.String(),
+      }),
+    },
     detail: {
       tags: ["User"],
       summary: "Login User",
@@ -88,6 +117,16 @@ export const userRoute = new Elysia({ prefix: "/api" })
     headers: t.Object({
       authorization: t.String()
     }),
+    response: {
+      200: t.Object({
+        message: t.String(),
+        data: UserProfileSchema,
+      }),
+      401: t.Object({
+        message: t.String(),
+        error: t.String(),
+      }),
+    },
     detail: {
       tags: ["User"],
       summary: "Dapatkan User Saat Ini",
@@ -133,6 +172,16 @@ export const userRoute = new Elysia({ prefix: "/api" })
     headers: t.Object({
       authorization: t.String()
     }),
+    response: {
+      200: t.Object({
+        message: t.String(),
+        data: t.String(),
+      }),
+      401: t.Object({
+        message: t.String(),
+        error: t.String(),
+      }),
+    },
     detail: {
       tags: ["User"],
       summary: "Logout User",
