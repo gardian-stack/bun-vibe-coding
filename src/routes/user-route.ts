@@ -16,7 +16,12 @@ export const userRoute = new Elysia({ prefix: "/api" })
       username: t.String({ minLength: 3, maxLength: 50 }),
       email: t.String({ format: 'email', maxLength: 255 }),
       password: t.String({ minLength: 8, maxLength: 255 }),
-    })
+    }),
+    detail: {
+      tags: ["User"],
+      summary: "Register User Baru",
+      description: "Mendaftarkan user baru ke sistem dengan melakukan hashing password."
+    }
   })
   .post("/users/login", async ({ body, set }) => {
     const result = await loginUser(body);
@@ -37,7 +42,12 @@ export const userRoute = new Elysia({ prefix: "/api" })
     body: t.Object({
       username: t.String(),
       password: t.String(),
-    })
+    }),
+    detail: {
+      tags: ["User"],
+      summary: "Login User",
+      description: "Otentikasi user berdasarkan username dan password, menghasilkan session token baru."
+    }
   })
   .post("/users/current", async ({ headers, set }) => {
     const authHeader = headers['authorization'];
@@ -77,7 +87,12 @@ export const userRoute = new Elysia({ prefix: "/api" })
   }, {
     headers: t.Object({
       authorization: t.String()
-    })
+    }),
+    detail: {
+      tags: ["User"],
+      summary: "Dapatkan User Saat Ini",
+      description: "Mengambil profil data user yang saat ini sedang login menggunakan token otorisasi Bearer."
+    }
   })
   .delete("/users/logout", async ({ headers, set }) => {
     const authHeader = headers['authorization'];
@@ -117,5 +132,10 @@ export const userRoute = new Elysia({ prefix: "/api" })
   }, {
     headers: t.Object({
       authorization: t.String()
-    })
+    }),
+    detail: {
+      tags: ["User"],
+      summary: "Logout User",
+      description: "Mengakhiri session login user dengan menghapus token dari database."
+    }
   });
